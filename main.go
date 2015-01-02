@@ -11,7 +11,6 @@ import (
 	"github.com/zenazn/goji/web"
 	"log"
 	"net/http"
-	"strconv"
 )
 
 type Baggage struct {
@@ -41,6 +40,18 @@ type ListWithBaggages struct {
 
 func NewList() *List {
 	return &List{0, ""}
+}
+
+type ErrorResponse struct {
+	Message string `json:"message"`
+}
+
+func NewErrorResponse(message string) *ErrorResponse {
+	return &ErrorResponse{message}
+}
+
+func (er *ErrorResponse) Json() ([]byte, error) {
+	return json.Marshal(er)
 }
 
 func main() {
@@ -74,7 +85,10 @@ func main() {
 	goji.Get("/lists/:id", func(c web.C, w http.ResponseWriter, r *http.Request) {
 		list := NewList()
 		err := dbmap.SelectOne(list, "SELECT * FROM lists WHERE id = ? LIMIT 1", c.URLParams["id"])
-		checkErr(err, "Failed to fetch a list")
+		if err != nil {
+			handleSelectOneErr(err, w, "List")
+			return
+		}
 
 		var baggages []Baggage
 		_, err = dbmap.Select(&baggages, "SELECT * FROM baggages WHERE list_id = ? ORDER BY id", c.URLParams["id"])
@@ -88,10 +102,14 @@ func main() {
 	})
 
 	goji.Post("/lists/:id/baggages", func(c web.C, w http.ResponseWriter, r *http.Request) {
-		listId, err := strconv.ParseUint(c.URLParams["id"], 10, 0)
-		checkErr(err, "Failed to parse ID of list")
+		list := NewList()
+		err := dbmap.SelectOne(list, "SELECT * FROM lists WHERE id = ? LIMIT 1", c.URLParams["id"])
+		if err != nil {
+			handleSelectOneErr(err, w, "List")
+			return
+		}
 
-		baggage := NewBaggageWithListId(listId)
+		baggage := NewBaggageWithListId(list.Id)
 		err = json.NewDecoder(r.Body).Decode(baggage)
 		checkErr(err, "Failed to decode JSON")
 
@@ -128,4 +146,15 @@ func checkErr(err error, msg string) {
 		log.Fatalln(msg, err)
 		panic(err)
 	}
+}
+
+func handleSelectOneErr(err error, w http.ResponseWriter, name string) {
+	if err == sql.ErrNoRows {
+		er := NewErrorResponse(fmt.Sprintf("%s is not found", name))
+		json, err := er.Json()
+		checkErr(err, "Failed to encode error response")
+		http.Error(w, string(json), http.StatusNotFound)
+		return
+	}
+	checkErr(err, fmt.Sprintf("Failed to fetch a %s", name))
 }
