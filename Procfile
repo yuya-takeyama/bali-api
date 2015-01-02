@@ -1,1 +1,1 @@
-web: ./bali-api
+web: bali-api
