@@ -82,16 +82,16 @@ func main() {
 		fmt.Fprintln(w, bytes.NewBuffer(json).String())
 	})
 
-	goji.Get("/lists/:id", func(c web.C, w http.ResponseWriter, r *http.Request) {
+	goji.Get("/lists/:list_id", func(c web.C, w http.ResponseWriter, r *http.Request) {
 		list := NewList()
-		err := dbmap.SelectOne(list, "SELECT * FROM lists WHERE id = ? LIMIT 1", c.URLParams["id"])
+		err := dbmap.SelectOne(list, "SELECT * FROM lists WHERE id = ? LIMIT 1", c.URLParams["list_id"])
 		if err != nil {
 			handleSelectOneErr(err, w, "List")
 			return
 		}
 
 		var baggages []Baggage
-		_, err = dbmap.Select(&baggages, "SELECT * FROM baggages WHERE list_id = ? ORDER BY id", c.URLParams["id"])
+		_, err = dbmap.Select(&baggages, "SELECT * FROM baggages WHERE list_id = ? ORDER BY id", c.URLParams["list_id"])
 
 		ListWithBaggages := ListWithBaggages{*list, baggages}
 
@@ -101,9 +101,9 @@ func main() {
 		fmt.Fprintln(w, bytes.NewBuffer(json).String())
 	})
 
-	goji.Post("/lists/:id/baggages", func(c web.C, w http.ResponseWriter, r *http.Request) {
+	goji.Post("/lists/:list_id/baggages", func(c web.C, w http.ResponseWriter, r *http.Request) {
 		list := NewList()
-		err := dbmap.SelectOne(list, "SELECT * FROM lists WHERE id = ? LIMIT 1", c.URLParams["id"])
+		err := dbmap.SelectOne(list, "SELECT * FROM lists WHERE id = ? LIMIT 1", c.URLParams["list_id"])
 		if err != nil {
 			handleSelectOneErr(err, w, "List")
 			return
