@@ -25,6 +25,15 @@ type List struct {
 	Name string `db:"name" json:"name"`
 }
 
+type ListWithBaggages struct {
+	List
+	Baggages []Baggage `json:"_baggages"`
+}
+
+func NewList() *List {
+	return &List{0, ""}
+}
+
 func main() {
 	dbmap := initDb()
 
@@ -39,7 +48,7 @@ func main() {
 	})
 
 	goji.Post("/lists", func(c web.C, w http.ResponseWriter, r *http.Request) {
-		list := &List{0, ""}
+		list := NewList()
 		err := json.NewDecoder(r.Body).Decode(list)
 		checkErr(err, "Failed to decode JSON")
 
@@ -50,6 +59,22 @@ func main() {
 		checkErr(err, "Failed to encode inserted data")
 
 		w.WriteHeader(http.StatusCreated)
+		fmt.Fprintln(w, bytes.NewBuffer(json).String())
+	})
+
+	goji.Get("/lists/:id", func(c web.C, w http.ResponseWriter, r *http.Request) {
+		list := NewList()
+		err := dbmap.SelectOne(list, "SELECT * FROM lists WHERE id = ? LIMIT 1", c.URLParams["id"])
+		checkErr(err, "Failed to fetch a list")
+
+		var baggages []Baggage
+		_, err = dbmap.Select(&baggages, "SELECT * FROM baggages WHERE list_id = ? ORDER BY id", c.URLParams["id"])
+
+		ListWithBaggages := ListWithBaggages{*list, baggages}
+
+		json, err := json.Marshal(ListWithBaggages)
+		checkErr(err, "Failed to encode fetched data")
+
 		fmt.Fprintln(w, bytes.NewBuffer(json).String())
 	})
 
