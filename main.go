@@ -123,6 +123,32 @@ func main() {
 		fmt.Fprintln(w, bytes.NewBuffer(json).String())
 	})
 
+	goji.Delete("/lists/:list_id/baggages/:baggage_id", func(c web.C, w http.ResponseWriter, r *http.Request) {
+		list := NewList()
+		err := dbmap.SelectOne(list, "SELECT * FROM lists WHERE id = ? LIMIT 1", c.URLParams["list_id"])
+		if err != nil {
+			handleSelectOneErr(err, w, "List")
+			return
+		}
+
+		baggage := NewBaggage()
+		err = dbmap.SelectOne(baggage, "SELECT * FROM baggages WHERE id = ? AND list_id = ? LIMIT 1", c.URLParams["baggage_id"], c.URLParams["list_id"])
+		if err != nil {
+			if err == sql.ErrNoRows {
+				w.WriteHeader(http.StatusNoContent)
+				return
+			} else {
+				handleSelectOneErr(err, w, "Baggage")
+			}
+			return
+		}
+
+		_, err = dbmap.Delete(baggage)
+		checkErr(err, "Failed to delete baggage")
+
+		w.WriteHeader(http.StatusNoContent)
+	})
+
 	updateIsChecked := func(c web.C, w http.ResponseWriter, r *http.Request, isChecked bool) {
 		list := NewList()
 		err := dbmap.SelectOne(list, "SELECT * FROM lists WHERE id = ? LIMIT 1", c.URLParams["list_id"])
