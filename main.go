@@ -123,6 +123,40 @@ func main() {
 		fmt.Fprintln(w, bytes.NewBuffer(json).String())
 	})
 
+	updateIsChecked := func(c web.C, w http.ResponseWriter, r *http.Request, isChecked bool) {
+		list := NewList()
+		err := dbmap.SelectOne(list, "SELECT * FROM lists WHERE id = ? LIMIT 1", c.URLParams["list_id"])
+		if err != nil {
+			handleSelectOneErr(err, w, "List")
+			return
+		}
+
+		baggage := NewBaggage()
+		err = dbmap.SelectOne(baggage, "SELECT * FROM baggages WHERE id = ? AND list_id = ? LIMIT 1", c.URLParams["baggage_id"], c.URLParams["list_id"])
+		if err != nil {
+			handleSelectOneErr(err, w, "Baggage")
+			return
+		}
+
+		baggage.IsChecked = isChecked
+
+		_, err = dbmap.Update(baggage)
+		checkErr(err, "Failed to update baggege")
+
+		json, err := json.Marshal(baggage)
+		checkErr(err, "Failed to encode updated data")
+
+		fmt.Fprintln(w, bytes.NewBuffer(json).String())
+	}
+
+	goji.Post("/lists/:list_id/baggages/:baggage_id/check", func(c web.C, w http.ResponseWriter, r *http.Request) {
+		updateIsChecked(c, w, r, true)
+	})
+
+	goji.Post("/lists/:list_id/baggages/:baggage_id/uncheck", func(c web.C, w http.ResponseWriter, r *http.Request) {
+		updateIsChecked(c, w, r, false)
+	})
+
 	goji.Serve()
 }
 
