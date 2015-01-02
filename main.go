@@ -60,9 +60,16 @@ func main() {
 	goji.Get("/lists", func(c web.C, w http.ResponseWriter, r *http.Request) {
 		var lists []List
 		_, err := dbmap.Select(&lists, "SELECT * FROM lists ORDER BY id DESC")
+		if err != nil {
+			handleServerError(err, w, "Failed to fetch lists")
+			return
+		}
 
 		json, err := json.Marshal(lists)
-		checkErr(err, "Failed to encode fetched data")
+		if err != nil {
+			handleServerError(err, w, "Failed to encode fetched data")
+			return
+		}
 
 		fmt.Fprintln(w, bytes.NewBuffer(json).String())
 	})
@@ -70,13 +77,22 @@ func main() {
 	goji.Post("/lists", func(c web.C, w http.ResponseWriter, r *http.Request) {
 		list := NewList()
 		err := json.NewDecoder(r.Body).Decode(list)
-		checkErr(err, "Failed to decode JSON")
+		if err != nil {
+			handleServerError(err, w, "Failed to decode JSON")
+			return
+		}
 
 		err = dbmap.Insert(list)
-		checkErr(err, "Failed to insert list")
+		if err != nil {
+			handleServerError(err, w, "Failed to insert list")
+			return
+		}
 
 		json, err := json.Marshal(list)
-		checkErr(err, "Failed to encode inserted data")
+		if err != nil {
+			handleServerError(err, w, "Failed to encode inserted data")
+			return
+		}
 
 		w.WriteHeader(http.StatusCreated)
 		fmt.Fprintln(w, bytes.NewBuffer(json).String())
@@ -96,7 +112,10 @@ func main() {
 		ListWithBaggages := ListWithBaggages{*list, baggages}
 
 		json, err := json.Marshal(ListWithBaggages)
-		checkErr(err, "Failed to encode fetched data")
+		if err != nil {
+			handleServerError(err, w, "Failed to encode fetched data")
+			return
+		}
 
 		fmt.Fprintln(w, bytes.NewBuffer(json).String())
 	})
@@ -111,13 +130,22 @@ func main() {
 
 		baggage := NewBaggageWithListId(list.Id)
 		err = json.NewDecoder(r.Body).Decode(baggage)
-		checkErr(err, "Failed to decode JSON")
+		if err != nil {
+			handleServerError(err, w, "Failed to decode JSON")
+			return
+		}
 
 		err = dbmap.Insert(baggage)
-		checkErr(err, "Failed to insert baggege")
+		if err != nil {
+			handleServerError(err, w, "Failed to insert baggege")
+			return
+		}
 
 		json, err := json.Marshal(baggage)
-		checkErr(err, "Failed to encode inserted data")
+		if err != nil {
+			handleServerError(err, w, "Failed to encode inserted data")
+			return
+		}
 
 		w.WriteHeader(http.StatusCreated)
 		fmt.Fprintln(w, bytes.NewBuffer(json).String())
@@ -144,7 +172,10 @@ func main() {
 		}
 
 		_, err = dbmap.Delete(baggage)
-		checkErr(err, "Failed to delete baggage")
+		if err != nil {
+			handleServerError(err, w, "Failed to delete baggage")
+			return
+		}
 
 		w.WriteHeader(http.StatusNoContent)
 	})
@@ -167,10 +198,16 @@ func main() {
 		baggage.IsChecked = isChecked
 
 		_, err = dbmap.Update(baggage)
-		checkErr(err, "Failed to update baggege")
+		if err != nil {
+			handleServerError(err, w, "Failed to update baggege")
+			return
+		}
 
 		json, err := json.Marshal(baggage)
-		checkErr(err, "Failed to encode updated data")
+		if err != nil {
+			handleServerError(err, w, "Failed to encode updated data")
+			return
+		}
 
 		fmt.Fprintln(w, bytes.NewBuffer(json).String())
 	}
@@ -206,6 +243,16 @@ func checkErr(err error, msg string) {
 		log.Fatalln(msg, err)
 		panic(err)
 	}
+}
+
+func handleServerError(err error, w http.ResponseWriter, message string) {
+	er := NewErrorResponse(fmt.Sprintf("%s: %s", message, err))
+
+	json, err := json.Marshal(er)
+	checkErr(err, "Failed to encode error response")
+
+	w.WriteHeader(http.StatusNoContent)
+	fmt.Fprintln(w, bytes.NewBuffer(json).String())
 }
 
 func handleSelectOneErr(err error, w http.ResponseWriter, name string) {
