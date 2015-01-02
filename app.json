@@ -1,0 +1,11 @@
+{
+  "name": "bali-api",
+  "description": "My simple baggage list app's API",
+  "repository": "https://github.com/yuya-takeyama/bali-api",
+  "env": {
+    "BUILDPACK_URL": "https://github.com/kr/heroku-buildpack-go.git"
+  },
+  "addons": [
+    "heroku-postgresql:hobby-dev"
+  ] 
+}
