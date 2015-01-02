@@ -11,17 +11,26 @@ import (
 	"github.com/zenazn/goji/web"
 	"log"
 	"net/http"
+	"strconv"
 )
 
 type Baggage struct {
-	Id        int64  `db:"id"         json:"id"`
-	ListId    int64  `db:"list_id"    json:"listId"`
+	Id        uint64 `db:"id"         json:"id"`
+	ListId    uint64 `db:"list_id"    json:"listId"`
 	Name      string `db:"name"       json:"name"`
 	IsChecked bool   `db:"is_checked" json:"isChecked"`
 }
 
+func NewBaggage() *Baggage {
+	return &Baggage{0, 0, "", false}
+}
+
+func NewBaggageWithListId(listId uint64) *Baggage {
+	return &Baggage{0, listId, "", false}
+}
+
 type List struct {
-	Id   int64  `db:"id"   json:"id"`
+	Id   uint64 `db:"id"   json:"id"`
 	Name string `db:"name" json:"name"`
 }
 
@@ -53,7 +62,7 @@ func main() {
 		checkErr(err, "Failed to decode JSON")
 
 		err = dbmap.Insert(list)
-		checkErr(err, "Failed to insert")
+		checkErr(err, "Failed to insert list")
 
 		json, err := json.Marshal(list)
 		checkErr(err, "Failed to encode inserted data")
@@ -75,6 +84,24 @@ func main() {
 		json, err := json.Marshal(ListWithBaggages)
 		checkErr(err, "Failed to encode fetched data")
 
+		fmt.Fprintln(w, bytes.NewBuffer(json).String())
+	})
+
+	goji.Post("/lists/:id/baggages", func(c web.C, w http.ResponseWriter, r *http.Request) {
+		listId, err := strconv.ParseUint(c.URLParams["id"], 10, 0)
+		checkErr(err, "Failed to parse ID of list")
+
+		baggage := NewBaggageWithListId(listId)
+		err = json.NewDecoder(r.Body).Decode(baggage)
+		checkErr(err, "Failed to decode JSON")
+
+		err = dbmap.Insert(baggage)
+		checkErr(err, "Failed to insert baggege")
+
+		json, err := json.Marshal(baggage)
+		checkErr(err, "Failed to encode inserted data")
+
+		w.WriteHeader(http.StatusCreated)
 		fmt.Fprintln(w, bytes.NewBuffer(json).String())
 	})
 
