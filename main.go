@@ -6,11 +6,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/coopernurse/gorp"
-	_ "github.com/mattn/go-sqlite3"
+	_ "github.com/lib/pq"
 	"github.com/zenazn/goji"
 	"github.com/zenazn/goji/web"
 	"log"
 	"net/http"
+	"os"
 )
 
 type Baggage struct {
@@ -246,10 +247,10 @@ func main() {
 }
 
 func initDb() *gorp.DbMap {
-	db, err := sql.Open("sqlite3", "./db/development.sqlite3")
+	db, err := sql.Open("postgres", os.Getenv("DATABASE_URL"))
 	checkErr(err, "Failed to open database")
 
-	dbmap := &gorp.DbMap{Db: db, Dialect: gorp.SqliteDialect{}}
+	dbmap := &gorp.DbMap{Db: db, Dialect: gorp.PostgresDialect{}}
 
 	dbmap.AddTableWithName(Baggage{}, "baggages").SetKeys(true, "Id")
 	dbmap.AddTableWithName(List{}, "lists").SetKeys(true, "Id")
