@@ -5,13 +5,14 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"log"
+	"net/http"
+	"os"
+
 	"github.com/coopernurse/gorp"
 	_ "github.com/lib/pq"
 	"github.com/zenazn/goji"
 	"github.com/zenazn/goji/web"
-	"log"
-	"net/http"
-	"os"
 )
 
 type Baggage struct {
@@ -72,6 +73,7 @@ func main() {
 			return
 		}
 
+		w.Header().Set("Content-type", "application/json")
 		fmt.Fprintln(w, bytes.NewBuffer(json).String())
 	})
 
@@ -95,6 +97,7 @@ func main() {
 			return
 		}
 
+		w.Header().Set("Content-type", "application/json")
 		w.WriteHeader(http.StatusCreated)
 		fmt.Fprintln(w, bytes.NewBuffer(json).String())
 	})
@@ -118,6 +121,7 @@ func main() {
 			return
 		}
 
+		w.Header().Set("Content-type", "application/json")
 		fmt.Fprintln(w, bytes.NewBuffer(json).String())
 	})
 
@@ -170,6 +174,7 @@ func main() {
 			return
 		}
 
+		w.Header().Set("Content-type", "application/json")
 		w.WriteHeader(http.StatusCreated)
 		fmt.Fprintln(w, bytes.NewBuffer(json).String())
 	})
